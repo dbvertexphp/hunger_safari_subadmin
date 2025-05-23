@@ -6,34 +6,35 @@ import {
   Spinner,
   Text,
   Icon,
-} from "@chakra-ui/react";
+} from '@chakra-ui/react';
 // Custom components
-import MiniCalendar from "components/calendar/MiniCalendar";
-import MiniStatistics from "components/card/MiniStatistics";
-import IconBox from "components/icons/IconBox";
-import React, { useState, useEffect } from "react";
+import MiniCalendar from 'components/calendar/MiniCalendar';
+import MiniStatistics from 'components/card/MiniStatistics';
+import IconBox from 'components/icons/IconBox';
+import React, { useState, useEffect } from 'react';
 import {
-  MdAddTask,
-  MdAttachMoney,
-  MdPeople,
-  MdRestaurant,
+  MdCategory,
+  MdRestaurantMenu,
+  MdShoppingCart,
   MdMoney,
-} from "react-icons/md";
-import axios from "axios";
+  MdAttachMoney,
+} from 'react-icons/md';
+import axios from 'axios';
 
 export default function UserReports() {
   // Chakra Color Mode
-  const brandColor = useColorModeValue("brand.500", "white");
-  const boxBg = useColorModeValue("secondaryGray.300", "whiteAlpha.100");
+  const brandColor = useColorModeValue('brand.500', 'white');
+  const boxBg = useColorModeValue('secondaryGray.300', 'whiteAlpha.100');
 
   // State for API data, loading, and error
   const [dashboardData, setDashboardData] = useState({
-    users: 0,
-    subAdmins: 0,
-    restaurants: 0,
-    codCollection: 0,
-    onlineCollection: 0,
-    newTasks: 0,
+    totalSubCategories: 0,
+    totalMenuItems: 0,
+    totalOrders: 0,
+    codOrders: 0,
+    onlineOrders: 0,
+    codAmount: 0,
+    onlineAmount: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -43,27 +44,31 @@ export default function UserReports() {
     const fetchDashboardData = async () => {
       try {
         const baseUrl = process.env.REACT_APP_BASE_URL;
-        const token = localStorage.getItem("token") || "";
+        const token = localStorage.getItem('token') || '';
 
-        const response = await axios.get(`${baseUrl}api/admin/adminAllDashboardCount`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const response = await axios.get(
+          `${baseUrl}api/admin/adminSubDashboardCount`,
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          },
+        );
 
         const data = response.data.data || {};
 
-        console.log("data", data);
+        console.log('data', data);
 
         setDashboardData({
-          users: data.totalUsers ?? 0,
-          subAdmins: data.totalSubAdmins ?? 0,
-          restaurants: data.totalRestaurants ?? 0,
-          codCollection: data.codPayments ?? 0,
-          onlineCollection: data.onlinePayments ?? 0,
-          newTasks: data.newTasks ?? 0,
+          totalSubCategories: data.totalSubCategories ?? 0,
+          totalMenuItems: data.totalMenuItems ?? 0,
+          totalOrders: data.totalOrders ?? 0,
+          codOrders: data.codOrders ?? 0,
+          onlineOrders: data.onlineOrders ?? 0,
+          codAmount: data.codAmount ?? 0,
+          onlineAmount: data.onlineAmount ?? 0,
         });
       } catch (err) {
-        console.error("API Error:", err.response || err.message);
-        setError("Failed to fetch dashboard data. Please try again later.");
+        console.error('API Error:', err.response || err.message);
+        setError('Failed to fetch dashboard data. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -72,11 +77,11 @@ export default function UserReports() {
     fetchDashboardData();
   }, []);
 
-  console.log("data2", dashboardData)
+  console.log('data2', dashboardData);
 
   if (loading) {
     return (
-      <Box pt={{ base: "130px", md: "80px", xl: "80px" }} textAlign="center">
+      <Box pt={{ base: '130px', md: '80px', xl: '80px' }} textAlign="center">
         <Spinner size="xl" color={brandColor} />
         <Text mt="4">Loading dashboard data...</Text>
       </Box>
@@ -85,69 +90,122 @@ export default function UserReports() {
 
   if (error) {
     return (
-      <Box pt={{ base: "130px", md: "80px", xl: "80px" }} textAlign="center">
+      <Box pt={{ base: '130px', md: '80px', xl: '80px' }} textAlign="center">
         <Text color="red.500">{error}</Text>
       </Box>
     );
   }
 
   return (
-    <Box pt={{ base: "130px", md: "80px", xl: "80px" }}>
-      <SimpleGrid columns={{ base: 1, md: 2, lg: 3, "2xl": 6 }} gap="20px" mb="20px">
+    <Box pt={{ base: '130px', md: '80px', xl: '80px' }}>
+      <SimpleGrid
+        columns={{ base: 1, md: 2, lg: 3, '2xl': 6 }}
+        gap="20px"
+        mb="20px"
+      >
         <MiniStatistics
           startContent={
-            <IconBox w="56px" h="56px" bg={boxBg}
-              icon={<Icon as={MdPeople} w="32px" h="32px" color={brandColor} />}
+            <IconBox
+              w="56px"
+              h="56px"
+              bg={boxBg}
+              icon={
+                <Icon as={MdCategory} w="32px" h="32px" color={brandColor} />
+              }
             />
           }
-          name="Users"
-          value={dashboardData.users}
+          name="Sub Categories"
+          value={dashboardData.totalSubCategories.toLocaleString()}
         />
         <MiniStatistics
           startContent={
-            <IconBox w="56px" h="56px" bg={boxBg}
-              icon={<Icon as={MdPeople} w="32px" h="32px" color={brandColor} />}
+            <IconBox
+              w="56px"
+              h="56px"
+              bg={boxBg}
+              icon={
+                <Icon
+                  as={MdRestaurantMenu}
+                  w="32px"
+                  h="32px"
+                  color={brandColor}
+                />
+              }
             />
           }
-          name="SubAdmins"
-          value={dashboardData.subAdmins.toLocaleString()}
+          name="Menu Items"
+          value={dashboardData.totalMenuItems.toLocaleString()}
         />
         <MiniStatistics
           startContent={
-            <IconBox w="56px" h="56px" bg={boxBg}
-              icon={<Icon as={MdRestaurant} w="32px" h="32px" color={brandColor} />}
+            <IconBox
+              w="56px"
+              h="56px"
+              bg={boxBg}
+              icon={
+                <Icon
+                  as={MdShoppingCart}
+                  w="32px"
+                  h="32px"
+                  color={brandColor}
+                />
+              }
             />
           }
-          name="Restaurants"
-          value={dashboardData.restaurants.toLocaleString()}
+          name="Total Orders"
+          value={dashboardData.totalOrders.toLocaleString()}
         />
         <MiniStatistics
           startContent={
-            <IconBox w="56px" h="56px" bg={boxBg}
+            <IconBox
+              w="56px"
+              h="56px"
+              bg={boxBg}
               icon={<Icon as={MdMoney} w="32px" h="32px" color={brandColor} />}
             />
           }
-          name="COD Collection"
-          value={`₹${dashboardData.codCollection.toLocaleString()}`}
+          name="COD Orders"
+          value={dashboardData.codOrders.toLocaleString()}
         />
         <MiniStatistics
           startContent={
-            <IconBox w="56px" h="56px" bg={boxBg}
-              icon={<Icon as={MdAttachMoney} w="32px" h="32px" color={brandColor} />}
+            <IconBox
+              w="56px"
+              h="56px"
+              bg={boxBg}
+              icon={
+                <Icon as={MdAttachMoney} w="32px" h="32px" color={brandColor} />
+              }
             />
           }
-          name="Online Collection"
-          value={`₹${dashboardData.onlineCollection.toLocaleString()}`}
+          name="Online Orders"
+          value={dashboardData.onlineOrders.toLocaleString()}
         />
         <MiniStatistics
           startContent={
-            <IconBox w="56px" h="56px"
-              bg="linear-gradient(90deg, #4481EB 0%, #04BEFE 100%)"
-              icon={<Icon as={MdAddTask} w="28px" h="28px" color="white" />}
+            <IconBox
+              w="56px"
+              h="56px"
+              bg={boxBg}
+              icon={<Icon as={MdMoney} w="32px" h="32px" color={brandColor} />}
             />
           }
-          name="New Tasks"
-          value={dashboardData.newTasks.toLocaleString()}
+          name="COD Amount"
+          value={`₹${dashboardData.codAmount.toLocaleString()}`}
+        />
+        <MiniStatistics
+          startContent={
+            <IconBox
+              w="56px"
+              h="56px"
+              bg={boxBg}
+              icon={
+                <Icon as={MdAttachMoney} w="32px" h="32px" color={brandColor} />
+              }
+            />
+          }
+          name="Online Amount"
+          value={`₹${dashboardData.onlineAmount.toLocaleString()}`}
         />
       </SimpleGrid>
 

@@ -30,8 +30,8 @@ import {
 import { EditIcon } from '@chakra-ui/icons';
 import Card from 'components/card/Card';
 import axios from 'axios';
-import { useParams, Navigate } from 'react-router-dom';
-import React, { useEffect, useState, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { debounce } from 'lodash';
 
@@ -48,14 +48,13 @@ const useFetchRestaurant = (baseUrl, token, restaurantId) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [redirect, setRedirect] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         if (!baseUrl || !token) {
-          throw new Error(
-            'Missing API URL, authentication token, or restaurant ID',
-          );
+          throw new Error('Missing API URL, authentication token, or restaurant ID');
         }
         const response = await axios.get(
           `${baseUrl}api/subadmin/getRestaurantByUserId`,
@@ -105,12 +104,9 @@ const useFetchRestaurant = (baseUrl, token, restaurantId) => {
           error.response?.data?.message ||
           error.message ||
           'Failed to load restaurant';
-        if (errorMessage.includes('Session expired')) {
+        if (errorMessage.includes('Session expired') || errorMessage.includes('Un-Authorized')) {
           localStorage.removeItem('token');
-          Navigate('/');
-        } else if (errorMessage.includes('Un-Authorized')) {
-          localStorage.removeItem('token');
-          Navigate('/');
+          setRedirect(true);
         } else {
           setError(errorMessage);
         }
@@ -121,7 +117,7 @@ const useFetchRestaurant = (baseUrl, token, restaurantId) => {
     fetchData();
   }, [baseUrl, token, restaurantId]);
 
-  return { data, loading, error, setData };
+  return { data, loading, error, setData, redirect };
 };
 
 const useFetchCategories = (baseUrl, token) => {
@@ -159,13 +155,13 @@ const useFetchCategories = (baseUrl, token) => {
 };
 
 function Restaurant() {
-  const { restaurantId } = useParams(); // Get restaurant ID from URL
-  // const Navigate = useNavigate();
+  const { restaurantId } = useParams();
+  const navigate = useNavigate();
   const textColor = useColorModeValue('secondaryGray.900', 'white');
   const baseUrl = useMemo(() => process.env.REACT_APP_BASE_URL, []);
   const token = localStorage.getItem('token');
 
-  const { data, loading, error, setData } = useFetchRestaurant(
+  const { data, loading, error, setData, redirect } = useFetchRestaurant(
     baseUrl,
     token,
     restaurantId,
@@ -175,6 +171,12 @@ function Restaurant() {
     loading: categoriesLoading,
     error: categoriesError,
   } = useFetchCategories(baseUrl, token);
+
+  useEffect(() => {
+    if (redirect) {
+      navigate('/');
+    }
+  }, [redirect, navigate]);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -197,40 +199,38 @@ function Restaurant() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState('');
 
-  const handleEditClick = useMemo(
-    () =>
-      debounce((restaurant) => {
-        try {
-          if (!restaurant || !restaurant.id) {
-            console.error('Invalid restaurant data:', restaurant);
-            setFormError('Cannot edit: Invalid restaurant data');
-            return;
-          }
-          setSelectedRestaurant(restaurant);
-          setFormData({
-            name: restaurant.name || '',
-            address: restaurant.address || '',
-            category_id: restaurant.category_id || '',
-            details: restaurant.details || '',
-            opening_time: restaurant.opening_time || '',
-            closing_time: restaurant.closing_time || '',
-            tax_rate: restaurant.tax_rate || '',
-            rating: restaurant.rating || '',
-            locationAddress: restaurant.locationAddress || '',
-            latitude: restaurant.latitude || '',
-            longitude: restaurant.longitude || '',
-            image: null,
-          });
-          setImagePreview(restaurant.image || '');
-          setIsEditModalOpen(true);
-        } catch (error) {
-          console.error('Error in handleEditClick:', error);
-          setFormError('Failed to open edit modal');
+  const handleEditClick = useCallback(
+    debounce((restaurant) => {
+      try {
+        if (!restaurant || !restaurant.id) {
+          console.error('Invalid restaurant data:', restaurant);
+          setFormError('Cannot edit: Invalid restaurant data');
+          return;
         }
-      }, 300),
+        setSelectedRestaurant(restaurant);
+        setFormData({
+          name: restaurant.name || '',
+          address: restaurant.address || '',
+          category_id: restaurant.category_id || '',
+          details: restaurant.details || '',
+          opening_time: restaurant.opening_time || '',
+          closing_time: restaurant.closing_time || '',
+          tax_rate: restaurant.tax_rate || '',
+          rating: restaurant.rating || '',
+          locationAddress: restaurant.locationAddress || '',
+          latitude: restaurant.latitude || '',
+          longitude: restaurant.longitude || '',
+          image: null,
+        });
+        setImagePreview(restaurant.image || '');
+        setIsEditModalOpen(true);
+      } catch (error) {
+        console.error('Error in handleEditClick:', error);
+        setFormError('Failed to open edit modal');
+      }
+    }, 300),
     [],
   );
-
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -251,8 +251,7 @@ function Restaurant() {
     if (!formData.category_id) return 'Category is required.';
     if (!formData.tax_rate) return 'Tax rate is required.';
     if (!formData.rating) return 'Rating is required.';
-    if (!formData.locationAddress.trim())
-      return 'Location address is required.';
+    if (!formData.locationAddress.trim()) return 'Location address is required.';
     if (!formData.latitude) return 'Latitude is required.';
     if (!formData.longitude) return 'Longitude is required.';
     if (!formData.opening_time) return 'Opening time is required.';
@@ -309,7 +308,7 @@ function Restaurant() {
       }
 
       const response = await axios.put(
-        `${baseUrl}api/resturant/update/${selectedRestaurant.id}`,
+        `${baseUrl}api/restaurant/update/${selectedRestaurant.id}`, // Fixed typo: resturant -> restaurant
         formDataToSend,
         {
           headers: {
@@ -434,7 +433,7 @@ function Restaurant() {
         <Table variant="simple" colorScheme="gray">
           <Thead>
             <Tr>
-						<Th>Image</Th>
+              <Th>Image</Th>
               <Th>Name</Th>
               <Th>Category</Th>
               <Th>Sub-Admin</Th>
@@ -448,7 +447,7 @@ function Restaurant() {
           </Thead>
           <Tbody>
             <Tr>
-						 <Td>
+              <Td>
                 {data.image ? (
                   <Image
                     src={data.image}
@@ -505,18 +504,15 @@ function Restaurant() {
                   <Table variant="simple" size="sm">
                     <Thead>
                       <Tr>
+                        <Th>Image</Th>
                         <Th>Name</Th>
                         <Th>Price</Th>
                         <Th>Description</Th>
-                        <Th>Image</Th>
                       </Tr>
                     </Thead>
                     <Tbody>
                       {subcategory.menuItems.map((item) => (
                         <Tr key={item._id}>
-                          <Td>{item.name}</Td>
-                          <Td>${item.price}</Td>
-                          <Td>{item.description || 'N/A'}</Td>
                           <Td>
                             {item.image ? (
                               <Image
@@ -531,6 +527,9 @@ function Restaurant() {
                               'N/A'
                             )}
                           </Td>
+                          <Td>{item.name}</Td>
+                          <Td>₹{item.price}</Td>
+                          <Td>{item.description || 'N/A'}</Td>
                         </Tr>
                       ))}
                     </Tbody>
@@ -798,7 +797,7 @@ function Restaurant() {
                             {subcategory.menuItems.map((item) => (
                               <Tr key={item._id}>
                                 <Td>{item.name}</Td>
-                                <Td>${item.price}</Td>
+                                <Td>₹{item.price}</Td>
                                 <Td>{item.description}</Td>
                                 <Td>
                                   {item.image && (

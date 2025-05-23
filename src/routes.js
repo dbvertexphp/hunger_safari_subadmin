@@ -1,22 +1,24 @@
 import React from 'react';
 import { Icon } from '@chakra-ui/react';
 import {
-  MdBarChart,
-  // MdPerson,
+  MdCategory,
   MdHome,
   MdLock,
-  // MdOutlineShoppingCart,
-	MdRestaurantMenu,
+  MdRestaurantMenu,
+	MdFastfood,
 } from 'react-icons/md';
+import { FaPizzaSlice, FaMoneyBillWave, } from "react-icons/fa";
 
 // Admin Imports
 import MainDashboard from 'views/admin/dashboard';
 import Subcategory from 'views/admin/subcategory';
+import AddMenuItem from 'views/admin/addMenuItem';
+import AllMenuItem from 'views/admin/allMenuItems';
+import CodOrders from 'views/admin/codOrders';
 // import Profile from 'views/admin/profile';
 // import DataTables from 'views/admin/dataTables';
 
 import Restaurant from 'views/admin/Restaurant';
-
 
 // Auth Imports
 import SignInCentered from 'views/auth/signIn';
@@ -39,12 +41,35 @@ const routes = [
     path: '/restaurants',
     component: <Restaurant />,
   },
-	{
+  {
     name: 'All SubCategory',
     layout: '/admin',
-    icon: <Icon as={MdBarChart} width="20px" height="20px" color="inherit" />,
+    icon: (
+      <Icon as={MdCategory} width="20px" height="20px" color="inherit" />
+    ),
     path: '/subCategory',
     component: <Subcategory />,
+  },
+	 {
+    name: 'All MenuItems',
+    layout: '/admin',
+    path: '/menuitems',
+    icon: <Icon as={MdFastfood} width="20px" height="20px" color="inherit" />,
+    component: <AllMenuItem />,
+  },
+  {
+    name: 'Add MenuItem',
+    layout: '/admin',
+    path: '/add-menuitem',
+    icon: <Icon as={FaPizzaSlice } width="20px" height="20px" color="inherit" />,
+    component: <AddMenuItem />,
+  },
+	 {
+    name: 'Cod Orders',
+    layout: '/admin',
+    path: '/cod-orders',
+    icon: <Icon as={FaMoneyBillWave } width="20px" height="20px" color="inherit" />,
+    component: <CodOrders />,
   },
   // {
   //   name: 'NFT Marketplace',
