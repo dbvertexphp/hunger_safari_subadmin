@@ -21,6 +21,8 @@
     "axios": "^1.9.0",
     "dotenv": "^16.5.0",
     "framer-motion": "^11.3.7",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.1",
     "lodash": "^4.17.21",
     "npm-force-resolutions": "^0.0.10",
     "react": "19.0.0",
@@ -35,6 +37,7 @@
     "react-is": "^18.3.1",
     "react-router-dom": "^6.25.1",
     "react-scripts": "^5.0.0",
+    "react-toastify": "^11.0.5",
     "stylis": "^4.3.2",
     "stylis-plugin-rtl": "^2.0.2",
     "web-vitals": "^4.2.2"

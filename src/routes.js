@@ -6,6 +6,7 @@ import {
   MdLock,
   MdRestaurantMenu,
 	MdFastfood,
+	// MdShoppingCartCheckout,
 } from 'react-icons/md';
 import { FaPizzaSlice, FaMoneyBillWave, } from "react-icons/fa";
 
@@ -15,6 +16,7 @@ import Subcategory from 'views/admin/subcategory';
 import AddMenuItem from 'views/admin/addMenuItem';
 import AllMenuItem from 'views/admin/allMenuItems';
 import CodOrders from 'views/admin/codOrders';
+import OnlineOrders from 'views/admin/onlineOrders'
 // import Profile from 'views/admin/profile';
 // import DataTables from 'views/admin/dataTables';
 
@@ -22,6 +24,7 @@ import Restaurant from 'views/admin/Restaurant';
 
 // Auth Imports
 import SignInCentered from 'views/auth/signIn';
+import { RiShoppingBag3Line } from 'react-icons/ri';
 // import { FaUtensils } from 'react-icons/fa';
 
 const routes = [
@@ -70,6 +73,13 @@ const routes = [
     path: '/cod-orders',
     icon: <Icon as={FaMoneyBillWave } width="20px" height="20px" color="inherit" />,
     component: <CodOrders />,
+  },
+	{
+    name: 'Online Orders',
+    layout: '/admin',
+    path: '/online-orders',
+    icon: <Icon as={RiShoppingBag3Line} width="20px" height="20px" color="inherit" />,
+    component: <OnlineOrders />,
   },
   // {
   //   name: 'NFT Marketplace',

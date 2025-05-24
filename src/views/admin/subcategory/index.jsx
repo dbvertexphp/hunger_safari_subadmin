@@ -37,6 +37,8 @@ import {
 import axios from 'axios';
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast, ToastContainer } from 'react-toastify'; // Import Toastify
+import 'react-toastify/dist/ReactToastify.css'; // Import Toastify CSS
 
 // Custom components
 import Card from 'components/card/Card';
@@ -47,8 +49,8 @@ export default function ComplexTable() {
   const [sorting, setSorting] = React.useState([]);
   const [data, setData] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState(null);
-  const [newSubCategory, setNewSubCategory] = React.useState({ name: '', image: null, restaurant_id: '680ccfbd7ab6ba4fb1b2f35b' });
+  const [restaurantId, setRestaurantId] = React.useState('');
+  const [newSubCategory, setNewSubCategory] = React.useState({ name: '', image: null, restaurant_id: '' });
   const [editSubCategory, setEditSubCategory] = React.useState({ id: '', name: '', image: null, restaurant_id: '' });
   const [selectedSubCategory, setSelectedSubCategory] = React.useState(null);
   const textColor = useColorModeValue('secondaryGray.900', 'white');
@@ -58,7 +60,7 @@ export default function ComplexTable() {
   const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
   const { isOpen: isDetailsOpen, onOpen: onDetailsOpen, onClose: onDetailsClose } = useDisclosure();
 
-  // Fetch subcategories from API
+  // Fetch subcategories and restaurant ID from API
   const baseUrl = process.env.REACT_APP_BASE_URL;
   const token = localStorage.getItem('token');
 
@@ -74,7 +76,7 @@ export default function ComplexTable() {
             headers: { Authorization: `Bearer ${token}` },
           },
         );
-        console.log('API Response:', response.data);
+        console.log('Subcategories API Response:', response.data);
 
         if (!response.data || !Array.isArray(response.data)) {
           throw new Error('Invalid response format: Expected an array of subcategories');
@@ -92,31 +94,60 @@ export default function ComplexTable() {
         setData(formattedData);
         setLoading(false);
       } catch (err) {
-        console.error('Fetch Error:', err);
+        console.error('Fetch Subcategories Error:', err);
         if (
           err.response?.data?.message === 'Not authorized, token failed' ||
           err.response?.data?.message === 'Session expired or logged in on another device' ||
           err.response?.data?.message ===
-            'Un-Authorized, You are not authorized to access this route.' ||  'Not authorized, token failed'
+            'Un-Authorized, You are not authorized to access this route.' ||
+            'Not authorized, token failed'
         ) {
+          toast.error('Session expired. Please log in again.');
           localStorage.removeItem('token');
           navigate('/');
         } else {
-          setError(err.message || 'Failed to fetch subcategories');
+          toast.error(err.response?.data?.message || 'Failed to fetch subcategories');
           setLoading(false);
         }
       }
     };
 
+    // Fetch restaurant ID for the user
+    const fetchRestaurantId = async () => {
+      try {
+        const response = await axios.get(`${baseUrl}api/subadmin/getRestaurantByUserId`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        console.log('Restaurant API Response:', response.data);
+        if (!response.data || !response.data._id) {
+          throw new Error('No restaurant found for this user');
+        }
+        console.log("id", response.data._id);
+        setRestaurantId(response.data._id);
+        setNewSubCategory((prev) => ({ ...prev, restaurant_id: response.data._id }));
+        setEditSubCategory((prev) => ({ ...prev, restaurant_id: response.data._id }));
+      } catch (err) {
+        console.error('Fetch Restaurant Error:', err);
+        toast.error(err.response?.data?.message || 'Failed to fetch restaurant');
+        setLoading(false);
+      }
+    };
+
     fetchSubCategories();
+    fetchRestaurantId();
   }, [navigate]);
 
   // Handle adding a new subcategory
   const handleAddSubmit = async () => {
     try {
+      if (!restaurantId) {
+        toast.error('No restaurant associated with this user');
+        return;
+      }
+
       const formData = new FormData();
       formData.append('name', newSubCategory.name);
-      formData.append('restaurant_id', newSubCategory.restaurant_id);
+      formData.append('restaurant_id', restaurantId);
       if (newSubCategory.image) {
         formData.append('image', newSubCategory.image);
       }
@@ -143,22 +174,28 @@ export default function ComplexTable() {
           menuItems: response.data.menuItems || [],
         },
       ]);
-      setNewSubCategory({ name: '', image: null, restaurant_id: '680ccfbd7ab6ba4fb1b2f35b' });
-      window.location.href = '/admin/subCategory';
+      setNewSubCategory({ name: '', image: null, restaurant_id: restaurantId });
+      toast.success('Subcategory added successfully!');
+      window.location.href = '/admin/subCategory'; // Use navigate instead of window.location
       onAddClose();
     } catch (err) {
       console.error('Add Subcategory Error:', err);
-      setError(err.message || 'Failed to add subcategory');
+      toast.error(err.response?.data?.message || 'Failed to add subcategory');
     }
   };
 
   // Handle updating a subcategory
   const handleEditSubmit = async () => {
     try {
+      if (!restaurantId) {
+        toast.error('No restaurant associated with this user');
+        return;
+      }
+
       const formData = new FormData();
       formData.append('name', editSubCategory.name);
-      formData.append('restaurant_id', editSubCategory.restaurant_id);
-      if (editSubCategory.image) {
+      formData.append('restaurant_id', restaurantId);
+      if (editSubCategory.image && typeof editSubCategory.image !== 'string') {
         formData.append('image', editSubCategory.image);
       }
 
@@ -185,12 +222,13 @@ export default function ComplexTable() {
             : item,
         ),
       );
-      setEditSubCategory({ id: '', name: '', image: null, restaurant_id: '' });
-      window.location.href = '/admin/subCategory';
+      setEditSubCategory({ id: '', name: '', image: null, restaurant_id: restaurantId });
+      toast.success('Subcategory updated successfully!');
+      window.location.href = '/admin/subCategory'; // Use navigate instead of window.location
       onEditClose();
     } catch (err) {
       console.error('Update Subcategory Error:', err);
-      setError(err.message || 'Failed to update subcategory');
+      toast.error(err.response?.data?.message || 'Failed to update subcategory');
     }
   };
 
@@ -203,10 +241,11 @@ export default function ComplexTable() {
         },
       });
       setData(data.filter((item) => item.id !== subCategoryId));
-      window.location.href = '/admin/subCategory';
+      toast.success('Subcategory deleted successfully!');
+      navigate('/admin/subCategory'); // Use navigate instead of window.location
     } catch (err) {
       console.error('Delete Subcategory Error:', err);
-      setError(err.message || 'Failed to delete subcategory');
+      toast.error(err.response?.data?.message || 'Failed to delete subcategory');
     }
   };
 
@@ -232,9 +271,10 @@ export default function ComplexTable() {
         ...selectedSubCategory,
         menuItems: selectedSubCategory.menuItems.filter((menuItem) => menuItem._id !== menuItemId),
       });
+      toast.success('Menu item deleted successfully!');
     } catch (err) {
       console.error('Delete Menu Item Error:', err);
-      setError(err.message || 'Failed to delete menu item');
+      toast.error(err.response?.data?.message || 'Failed to delete menu item');
     }
   };
 
@@ -250,11 +290,12 @@ export default function ComplexTable() {
       id: subCategory.id,
       name: subCategory.name,
       image: subCategory.image,
-      restaurant_id: subCategory.restaurant_id,
+      restaurant_id: restaurantId,
     });
     onEditOpen();
   };
 
+  // Handle add menu navigation
   const handleAddMenu = () => {
     navigate('/admin/add-menuitem');
   };
@@ -392,21 +433,7 @@ export default function ComplexTable() {
         <Text color={textColor} fontSize="22px" fontWeight="700" p="25px">
           Loading...
         </Text>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card
-        flexDirection="column"
-        w="100%"
-        px="0px"
-        overflowX={{ sm: 'scroll', lg: 'hidden' }}
-      >
-        <Text color={textColor} fontSize="22px" fontWeight="700" p="25px">
-          Error: {error}
-        </Text>
+        <ToastContainer />
       </Card>
     );
   }
@@ -555,7 +582,13 @@ export default function ComplexTable() {
                 }
               />
             </FormControl>
-            <img style={{width: "80px", height: "80px", marginTop: "15px"}} src={editSubCategory.image}/>
+            {editSubCategory.image && typeof editSubCategory.image === 'string' && (
+              <img
+                style={{ width: '80px', height: '80px', marginTop: '15px' }}
+                src={editSubCategory.image}
+                alt="Subcategory"
+              />
+            )}
             <Input
               type="hidden"
               value={editSubCategory.restaurant_id}
@@ -637,6 +670,18 @@ export default function ComplexTable() {
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </Card>
   );
 }

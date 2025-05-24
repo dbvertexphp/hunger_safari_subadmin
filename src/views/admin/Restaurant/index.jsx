@@ -62,6 +62,7 @@ const useFetchRestaurant = (baseUrl, token, restaurantId) => {
             headers: { Authorization: `Bearer ${token}` },
           },
         );
+        console.log('API Response:', response.data); // Debug API response
         if (!response.data) {
           throw new Error('Invalid API response: No restaurant found');
         }
@@ -71,15 +72,13 @@ const useFetchRestaurant = (baseUrl, token, restaurantId) => {
           category: response.data.category_id?.name || 'N/A',
           category_id: response.data.category_id?._id || '',
           address: response.data.address || 'N/A',
-          details: response.data.details || 'N/A',
           opening_time: response.data.opening_time || 'N/A',
           closing_time: response.data.closing_time || 'N/A',
           tax_rate: response.data.tax_rate || 0,
           rating: response.data.rating || 0,
           createdAt: response.data.createdAt || 'N/A',
-          locationAddress: response.data.locationAddress || 'N/A',
-          latitude: response.data.latitude || 0,
-          longitude: response.data.longitude || 0,
+          latitude: response.data.location?.coordinates?.[0] || 0,
+          longitude: response.data.location?.coordinates?.[1] || 0,
           image: response.data.image || '',
           subAdminName: response.data.subAdminName || 'N/A',
           subcategoryCount: response.data.subcategories?.length || 0,
@@ -190,7 +189,6 @@ function Restaurant() {
     closing_time: '',
     tax_rate: '',
     rating: '',
-    locationAddress: '',
     latitude: '',
     longitude: '',
     image: null,
@@ -199,37 +197,40 @@ function Restaurant() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState('');
 
-  const handleEditClick = useCallback(
-    debounce((restaurant) => {
-      try {
-        if (!restaurant || !restaurant.id) {
-          console.error('Invalid restaurant data:', restaurant);
-          setFormError('Cannot edit: Invalid restaurant data');
-          return;
-        }
-        setSelectedRestaurant(restaurant);
-        setFormData({
-          name: restaurant.name || '',
-          address: restaurant.address || '',
-          category_id: restaurant.category_id || '',
-          details: restaurant.details || '',
-          opening_time: restaurant.opening_time || '',
-          closing_time: restaurant.closing_time || '',
-          tax_rate: restaurant.tax_rate || '',
-          rating: restaurant.rating || '',
-          locationAddress: restaurant.locationAddress || '',
-          latitude: restaurant.latitude || '',
-          longitude: restaurant.longitude || '',
-          image: null,
-        });
-        setImagePreview(restaurant.image || '');
-        setIsEditModalOpen(true);
-      } catch (error) {
-        console.error('Error in handleEditClick:', error);
-        setFormError('Failed to open edit modal');
+  const debouncedHandleEditClick = debounce((restaurant, setSelectedRestaurant, setFormData, setImagePreview, setIsEditModalOpen, setFormError) => {
+    try {
+      if (!restaurant || !restaurant.id) {
+        console.error('Invalid restaurant data:', restaurant);
+        setFormError('Cannot edit: Invalid restaurant data');
+        return;
       }
-    }, 300),
-    [],
+      setSelectedRestaurant(restaurant);
+      setFormData({
+        name: restaurant.name || '',
+        address: restaurant.address || '',
+        category_id: restaurant.category_id || '',
+        details: restaurant.details || '',
+        opening_time: restaurant.opening_time || '',
+        closing_time: restaurant.closing_time || '',
+        tax_rate: restaurant.tax_rate || '',
+        rating: restaurant.rating || '',
+        latitude: restaurant.latitude || '',
+        longitude: restaurant.longitude || '',
+        image: null,
+      });
+      setImagePreview(restaurant.image || '');
+      setIsEditModalOpen(true);
+    } catch (error) {
+      console.error('Error in handleEditClick:', error);
+      setFormError('Failed to open edit modal');
+    }
+  }, 300);
+
+  const handleEditClick = useCallback(
+    (restaurant) => {
+      debouncedHandleEditClick(restaurant, setSelectedRestaurant, setFormData, setImagePreview, setIsEditModalOpen, setFormError);
+    },
+    [setSelectedRestaurant, setFormData, setImagePreview, setIsEditModalOpen, setFormError, debouncedHandleEditClick]
   );
 
   const handleInputChange = (e) => {
@@ -251,9 +252,6 @@ function Restaurant() {
     if (!formData.category_id) return 'Category is required.';
     if (!formData.tax_rate) return 'Tax rate is required.';
     if (!formData.rating) return 'Rating is required.';
-    if (!formData.locationAddress.trim()) return 'Location address is required.';
-    if (!formData.latitude) return 'Latitude is required.';
-    if (!formData.longitude) return 'Longitude is required.';
     if (!formData.opening_time) return 'Opening time is required.';
     if (!formData.closing_time) return 'Closing time is required.';
 
@@ -300,7 +298,6 @@ function Restaurant() {
       formDataToSend.append('closing_time', formData.closing_time);
       formDataToSend.append('tax_rate', parseFloat(formData.tax_rate));
       formDataToSend.append('rating', parseFloat(formData.rating));
-      formDataToSend.append('locationAddress', formData.locationAddress);
       formDataToSend.append('latitude', parseFloat(formData.latitude));
       formDataToSend.append('longitude', parseFloat(formData.longitude));
       if (formData.image) {
@@ -308,7 +305,7 @@ function Restaurant() {
       }
 
       const response = await axios.put(
-        `${baseUrl}api/restaurant/update/${selectedRestaurant.id}`, // Fixed typo: resturant -> restaurant
+        `${baseUrl}api/resturant/update/${selectedRestaurant.id}`,
         formDataToSend,
         {
           headers: {
@@ -331,7 +328,6 @@ function Restaurant() {
           closing_time: formData.closing_time,
           tax_rate: parseFloat(formData.tax_rate),
           rating: parseFloat(formData.rating),
-          locationAddress: formData.locationAddress,
           latitude: parseFloat(formData.latitude),
           longitude: parseFloat(formData.longitude),
           image: formData.image
@@ -366,7 +362,6 @@ function Restaurant() {
       closing_time: '',
       tax_rate: '',
       rating: '',
-      locationAddress: '',
       latitude: '',
       longitude: '',
       image: null,
@@ -440,9 +435,8 @@ function Restaurant() {
               <Th>Rating</Th>
               <Th>Tax Rate</Th>
               <Th>Subcategories</Th>
-              <Th>Details</Th>
               <Th>Time</Th>
-              <Th>Location Address</Th>
+              <Th>Address</Th>
             </Tr>
           </Thead>
           <Tbody>
@@ -467,11 +461,10 @@ function Restaurant() {
               <Td>{data.rating}</Td>
               <Td>{data.tax_rate}%</Td>
               <Td>{data.subcategoryCount}</Td>
-              <Td>{data.details || 'N/A'}</Td>
               <Td>
                 ({data.opening_time}-{data.closing_time})
               </Td>
-              <Td>{data.locationAddress || 'N/A'}</Td>
+              <Td>{data.address || 'N/A'}</Td>
             </Tr>
           </Tbody>
         </Table>
@@ -639,15 +632,6 @@ function Restaurant() {
               />
             </FormControl>
             <FormControl mb={4} isRequired>
-              <FormLabel>Location Address</FormLabel>
-              <Input
-                name="locationAddress"
-                value={formData.locationAddress}
-                onChange={handleInputChange}
-                placeholder="Enter location address"
-              />
-            </FormControl>
-            <FormControl mb={4} isRequired>
               <FormLabel>Latitude</FormLabel>
               <Input
                 name="latitude"
@@ -737,10 +721,6 @@ function Restaurant() {
                     />
                   )}
                   <Text fontSize="sm" mb={2}>
-                    <strong>Details:</strong>{' '}
-                    {selectedRestaurant.details || 'N/A'}
-                  </Text>
-                  <Text fontSize="sm" mb={2}>
                     <strong>Opening Time:</strong>{' '}
                     {selectedRestaurant.opening_time || 'N/A'}
                   </Text>
@@ -749,8 +729,8 @@ function Restaurant() {
                     {selectedRestaurant.closing_time || 'N/A'}
                   </Text>
                   <Text fontSize="sm" mb={2}>
-                    <strong>Location Address:</strong>{' '}
-                    {selectedRestaurant.locationAddress || 'N/A'}
+                    <strong>Address:</strong>{' '}
+                    {selectedRestaurant.address || 'N/A'}
                   </Text>
                   <Text fontSize="sm" mb={2}>
                     <strong>Coordinates:</strong> ({selectedRestaurant.latitude}

@@ -47,7 +47,11 @@ export default function OrdersTable() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
   const [selectedOrder, setSelectedOrder] = React.useState(null);
-  const { isOpen: isDetailsOpen, onOpen: onDetailsOpen, onClose: onDetailsClose } = useDisclosure();
+  const {
+    isOpen: isDetailsOpen,
+    onOpen: onDetailsOpen,
+    onClose: onDetailsClose,
+  } = useDisclosure();
   const textColor = useColorModeValue('secondaryGray.900', 'white');
   const borderColor = useColorModeValue('gray.200', 'whiteAlpha.100');
   const navigate = useNavigate();
@@ -62,13 +66,18 @@ export default function OrdersTable() {
         if (!baseUrl || !token) {
           throw new Error('Missing base URL or authentication token');
         }
-        const response = await axios.get(`${baseUrl}api/admin/getOrdersByRestaurant`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await axios.get(
+          `${baseUrl}api/admin/getOnlineOrdersByRestaurant`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         console.log('API Response (Orders):', response.data);
 
         if (!response.data || !Array.isArray(response.data)) {
-          throw new Error('Invalid response format: Expected an array of orders');
+          throw new Error(
+            'Invalid response format: Expected an array of orders',
+          );
         }
 
         const formattedData = response.data.map((item) => ({
@@ -79,7 +88,9 @@ export default function OrdersTable() {
           paymentMethod: item.paymentMethod,
           orderStatus: item.orderStatus || 'Unknown',
           paymentStatus: item.paymentStatus || 'Unknown',
-          createdAt: item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '',
+          createdAt: item.createdAt
+            ? new Date(item.createdAt).toLocaleDateString()
+            : '',
           shippingAddress: item.shippingAddress,
           items: item.items,
           totalPrice: item.totalPrice,
@@ -92,8 +103,10 @@ export default function OrdersTable() {
         console.error('Fetch Orders Error:', err);
         if (
           err.response?.data?.message === 'Not authorized, token failed' ||
-          err.response?.data?.message === 'Session expired or logged in on another device' ||
-          err.response?.data?.message === 'Un-Authorized, You are not authorized to access this route.' ||
+          err.response?.data?.message ===
+            'Session expired or logged in on another device' ||
+          err.response?.data?.message ===
+            'Un-Authorized, You are not authorized to access this route.' ||
           err.response?.data?.message === 'Not authorized, token failed'
         ) {
           localStorage.removeItem('token');
@@ -148,12 +161,12 @@ export default function OrdersTable() {
       await axios.patch(
         `${baseUrl}api/admin/update-cod-order-status/${id}`,
         { [field]: value },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       setData((prev) =>
         prev.map((item) =>
-          item.id === id ? { ...item, [field]: value } : item
-        )
+          item.id === id ? { ...item, [field]: value } : item,
+        ),
       );
       toast.success(`Order Status updated to ${value}!`, {
         position: 'top-right',
@@ -167,33 +180,6 @@ export default function OrdersTable() {
       });
     }
   };
-
-  // Handle payment status update with separate toast
-  const handlePaymentStatusChange = async (id, field, value) => {
-    try {
-      await axios.patch(
-        `${baseUrl}api/admin/update-cod-payment-status/${id}`,
-        { [field]: value },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setData((prev) =>
-        prev.map((item) =>
-          item.id === id ? { ...item, [field]: value } : item
-        )
-      );
-      toast.success(`Payment Status updated to ${value}!`, {
-        position: 'top-right',
-        autoClose: 3000,
-      });
-    } catch (err) {
-      console.error('Payment Status Update Error:', err);
-      toast.error('Failed to update payment status', {
-        position: 'top-right',
-        autoClose: 3000,
-      });
-    }
-  };
-
   const columns = [
     columnHelper.accessor('orderId', {
       id: 'orderId',
@@ -294,7 +280,13 @@ export default function OrdersTable() {
             <Select
               size="sm"
               value={info.getValue()}
-              onChange={(e) => handleOrderStatusChange(info.row.original.id, 'orderStatus', e.target.value)}
+              onChange={(e) =>
+                handleOrderStatusChange(
+                  info.row.original.id,
+                  'orderStatus',
+                  e.target.value,
+                )
+              }
               bg={bg}
               color={color}
               borderColor={color}
@@ -324,19 +316,10 @@ export default function OrdersTable() {
       cell: (info) => {
         const { bg, color } = getStatusStyles(info.getValue(), 'paymentStatus');
         return (
-          <Flex align="center">
-            <Select
-              size="sm"
-              value={info.getValue()}
-              onChange={(e) => handlePaymentStatusChange(info.row.original.id, 'paymentStatus', e.target.value)}
-              bg={bg}
-              color={color}
-              borderColor={color}
-            >
-              <option value="Pending">Pending</option>
-              <option value="Paid">Paid</option>
-              <option value="Failed">Failed</option>
-            </Select>
+          <Flex align="center" bg={bg} px="2" py="1" borderRadius="md">
+            <Text color={color} fontSize="sm" fontWeight="700">
+              {info.getValue()}
+            </Text>
           </Flex>
         );
       },
@@ -509,19 +492,26 @@ export default function OrdersTable() {
             {selectedOrder && (
               <Box>
                 <Box mb="4">
-                  <Text fontWeight="bold" fontSize="lg">Shipping Address</Text>
+                  <Text fontWeight="bold" fontSize="lg">
+                    Shipping Address
+                  </Text>
                   <Text>{selectedOrder.shippingAddress?.fullName}</Text>
                   <Text>{selectedOrder.shippingAddress?.addressLine1}</Text>
                   <Text>{selectedOrder.shippingAddress?.addressLine2}</Text>
                   <Text>
-                    {selectedOrder.shippingAddress?.city}, {selectedOrder.shippingAddress?.state}{' '}
+                    {selectedOrder.shippingAddress?.city},{' '}
+                    {selectedOrder.shippingAddress?.state}{' '}
                     {selectedOrder.shippingAddress?.pincode}
                   </Text>
                   <Text>{selectedOrder.shippingAddress?.country}</Text>
-                  <Text>Phone: {selectedOrder.shippingAddress?.mobileNumber}</Text>
+                  <Text>
+                    Phone: {selectedOrder.shippingAddress?.mobileNumber}
+                  </Text>
                 </Box>
                 <Box mb="4">
-                  <Text fontWeight="bold" fontSize="lg">Order Details</Text>
+                  <Text fontWeight="bold" fontSize="lg">
+                    Order Details
+                  </Text>
                   <Table variant="simple" size="sm">
                     <Thead>
                       <Tr>
@@ -559,20 +549,32 @@ export default function OrdersTable() {
                 </Flex>
                 <Box mb="4">
                   <Text fontWeight="bold">Payment Status:</Text>
-                  <Text {...getStatusStyles(selectedOrder.paymentStatus, 'paymentStatus')}>
+                  <Text
+                    {...getStatusStyles(
+                      selectedOrder.paymentStatus,
+                      'paymentStatus',
+                    )}
+                  >
                     {selectedOrder.paymentStatus}
                   </Text>
                 </Box>
                 <Box mb="4">
                   <Text fontWeight="bold">Order Status:</Text>
-                  <Text {...getStatusStyles(selectedOrder.orderStatus, 'orderStatus')}>
+                  <Text
+                    {...getStatusStyles(
+                      selectedOrder.orderStatus,
+                      'orderStatus',
+                    )}
+                  >
                     {selectedOrder.orderStatus}
                   </Text>
                 </Box>
                 <Box>
                   <Text fontWeight="bold">Order Date:</Text>
                   <Text>{selectedOrder.createdAt}</Text>
-                  <Text fontWeight="bold" mt="2">Payment Method:</Text>
+                  <Text fontWeight="bold" mt="2">
+                    Payment Method:
+                  </Text>
                   <Text>{selectedOrder.paymentMethod}</Text>
                 </Box>
               </Box>
